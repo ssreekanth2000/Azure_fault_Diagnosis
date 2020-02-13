@@ -33,29 +33,37 @@ def iothub_client_telemetry_sample_run():
                 try:
                     line1 = str(line.decode("UTF-8"))
                 except:
-                    print("failed to decode")
-                broken_line = (
-                    line1
-                    .replace("\r", "")
-                    .replace("\n", "")
-                    .split(",")
-                )
+                    msg_txt_formatted = MSG_TXT.format(
+                        temperature="err",
+                        device="err",
+                        timestamp1="decode err",
+                        timestamp2="err",
+                        battery="err",
+                    )
+                    message = Message(msg_txt_formatted)
+                    print("Sending message: {}".format(message))
+                    client.send_message(message)
+                broken_line = line1.replace("\r", "").replace("\n", "").split(",")
                 # print("Broken line: {}".format(broken_line))
                 # Extract vlues from the serial line
-                device = broken_line[0]
-                battery = broken_line[1]
-                timestamp2 = time.time()
-                if (timestamp2-timestamp4) % 3600 ==0:
-                    client = iothub_client_init()
+                try:
+                    device = broken_line[0]
+                    battery = broken_line[1]
+                    timestamp2 = time.time()
+                except:
+                    device = 00
+                    battery = 00
+                    timestamp2 = time.time()
+
 
                 # print (broken_line)
                 t0 = 2
                 while t0 < (len(broken_line) - 1):
 
-                    temperature=broken_line[t0+1]
-                    timestamp1 =broken_line[t0]
-                    #print(t0)
-                    t0=t0+2
+                    temperature = broken_line[t0 + 1]
+                    timestamp1 = broken_line[t0]
+                    # print(t0)
+                    t0 = t0 + 2
                     msg_txt_formatted = MSG_TXT.format(
                         temperature=temperature,
                         device=device,
@@ -90,13 +98,16 @@ if __name__ == "__main__":
     print(ser.read(ser.in_waiting))
 
     time.sleep(1)
-    ser.write("ATSM8\r".encode("ascii"))
+    ser.write("ATSM8\r".encode("ascii"))  # Synchronized sleep
     time.sleep(1)
-    ser.write("ATSO1\r".encode("ascii"))
+    ser.write("ATSO1\r".encode("ascii"))  # SLeep coordinator
     time.sleep(1)
-    ser.write("ATSP3E8\r".encode("ascii"))
+    # TODO: Some of these comments are wrong!
+    ser.write("ATSPEA60\r".encode("ascii"))  # Be awake for 0.5 sec
+    # ser.write("ATSP3E8\r".encode("ascii")) # Be awake for 1 sec (doesn't work?)
     time.sleep(1)
-    ser.write("ATST3E8\r".encode("ascii"))
+    ser.write("ATST1F4\r".encode("ascii"))  # Be asleep for 10min
+    # ser.write("ATST3E8\r".encode("ascii")) # Be asleep for 10sec
     time.sleep(4)
 
     print("XBee configured.  Starting server...")
